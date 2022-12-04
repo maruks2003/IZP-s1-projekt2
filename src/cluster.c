@@ -84,18 +84,12 @@ void init_cluster(struct cluster_t *c, int cap)
 
     // TODO - hopefully done
     c->size = 0;
-    if(cap == 0){
-        c->obj = NULL;
-    }
-
+    c->obj = NULL;
     c->capacity = cap;
-    struct obj_t *new_obj = malloc(sizeof(struct obj_t)*cap);
 
-    // Check if the malloc was succesfull
-    if(new_obj == NULL){
-        return;
+    if(cap != 0){
+        c->obj = malloc(sizeof(struct obj_t)*cap);
     }
-    c->obj = new_obj;
 }
 
 /*
@@ -140,15 +134,11 @@ struct cluster_t *resize_cluster(struct cluster_t *c, int new_cap)
 void append_cluster(struct cluster_t *c, struct obj_t obj)
 {
     // TODO - hopefully done
-    debug("append_cluster");
-    dint(c->capacity);
-    dint(c->size);
-    if (c->size>=c->capacity){
+    if (c->size >= c->capacity){
         resize_cluster(c, c->capacity+CLUSTER_CHUNK);
     }
-    c->obj[c->size+1] = obj;
+    c->obj[c->size] = obj;
     c->size += 1;
-    debug("end of append_cluster");
 }
 
 /*
@@ -330,24 +320,14 @@ int load_clusters(char *filename, struct cluster_t **arr)
         return 0;
     }
 
-
-    // How much results did we get from fscanf 
-    // used for error handling
-    int res = 0;
-
-    // fscanf the count to string first in order
-    // to safely convert it to int later
     int count;
-    res = fscanf(file, "count=%d", &count);
 
     // Error in fscanf
-    if (res != 1){
-        *arr = NULL;
+    if (fscanf(file, "count=%d", &count) != 1){
         fclose(file);
         fprintf(stderr, "Error while reading file");
         return 0;
     }
-    res = 0;
 
     // obj_t properties
     int id;
@@ -364,16 +344,27 @@ int load_clusters(char *filename, struct cluster_t **arr)
 
     // Iterate through as many lines as count says
     for(int i = 0; i < count; ++i){
-        res = fscanf(file, "%d %d %d", &id, &x, &y);
-
-        // Checking for error while scanning line and skipping the line
-        if(res!=3){
-            continue;
+        arr[i] = malloc(sizeof(struct cluster_t));
+        if (arr[i] == NULL){
+            fclose(file);
+            return 0;
         }
 
+        // Checking for error while scanning line and skipping the line
+        if(fscanf(file, "%d %d %d", &id, &x, &y) != 3){
+            continue;
+        }
+        dfmt("%d %d %d", id, x, y);
+
         init_cluster(arr[i], CLUSTER_CHUNK);
+
+        // Unsuccesfull initialization
+        if(arr[i]->capacity != 0 && arr[i]->obj == NULL){
+            free(arr[i]);
+            arr[i] = NULL;
+        }
+
         struct obj_t object={id, x, y};
-        dfmt("%d, %f, %f", object.id, object.x, object.y);
         append_cluster(arr[i], object);
 
     }
