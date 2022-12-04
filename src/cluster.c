@@ -83,21 +83,19 @@ void init_cluster(struct cluster_t *c, int cap)
     assert(cap >= 0);
 
     // TODO - hopefully done
-    if(c->obj == NULL){
-    // TODO - remove the segfault here
-        c->capacity = 0;
-        return;
+    c->size = 0;
+    if(cap == 0){
+        c->obj = NULL;
     }
 
-    // TODO - remove the segfault here
     c->capacity = cap;
-    struct cluster_t *new_c = malloc(sizeof(struct obj_t)*cap);
+    struct obj_t *new_obj = malloc(sizeof(struct obj_t)*cap);
 
     // Check if the malloc was succesfull
-    if(new_c == NULL){
+    if(new_obj == NULL){
         return;
     }
-    c = new_c;
+    c->obj = new_obj;
 }
 
 /*
@@ -142,10 +140,15 @@ struct cluster_t *resize_cluster(struct cluster_t *c, int new_cap)
 void append_cluster(struct cluster_t *c, struct obj_t obj)
 {
     // TODO - hopefully done
-    if (c->size==c->capacity){
+    debug("append_cluster");
+    dint(c->capacity);
+    dint(c->size);
+    if (c->size>=c->capacity){
         resize_cluster(c, c->capacity+CLUSTER_CHUNK);
     }
     c->obj[c->size+1] = obj;
+    c->size += 1;
+    debug("end of append_cluster");
 }
 
 /*
@@ -351,6 +354,14 @@ int load_clusters(char *filename, struct cluster_t **arr)
     int x;
     int y;
 
+    // Malloc enough space for all the clusters
+    // and check for error
+    *arr = malloc(sizeof(struct cluster_t)*count);
+    if (*arr == NULL){
+        fclose(file);
+        return 0;
+    }
+
     // Iterate through as many lines as count says
     for(int i = 0; i < count; ++i){
         res = fscanf(file, "%d %d %d", &id, &x, &y);
@@ -362,6 +373,7 @@ int load_clusters(char *filename, struct cluster_t **arr)
 
         init_cluster(arr[i], CLUSTER_CHUNK);
         struct obj_t object={id, x, y};
+        dfmt("%d, %f, %f", object.id, object.x, object.y);
         append_cluster(arr[i], object);
 
     }
