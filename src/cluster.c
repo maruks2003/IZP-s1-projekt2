@@ -297,10 +297,23 @@ int load_clusters(char *filename, struct cluster_t **arr)
     for(int i = 0; i<count; ++i){
         res = fscanf(file, "%s %s %s", str_id, str_x, str_y);
 
+        // Checking for error while scanning line
         if(res!=3){
-            // Error while scanning line, ignore it
             continue;
         }
+
+        id = atoi(str_id);
+        x = atoi(str_x);
+        y = atoi(str_y);
+
+        // Checking for errors in conversion
+        if((id = 0 && str_id != "0")||(x = 0 && str_x != "0")||(y = 0 && str_y != "0")){
+            continue;
+        }
+
+        struct object_t
+
+        append_cluster();
 
     }
 
