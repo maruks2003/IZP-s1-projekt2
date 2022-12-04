@@ -266,7 +266,46 @@ int load_clusters(char *filename, struct cluster_t **arr)
 
     // TODO
     FILE *file = fopen(filename, "r");
-    fget
+
+
+    // fscanf the count to string first in order
+    // to safely convert it to int later
+    int count;
+    char *str_count[100];
+    fscanf(file, "count=%s", str_count);
+    count = atoi(str_count);
+
+    // atoi returns 0 on error, we must check if we have
+    // an error or if just scanned 0
+    if(count = 0 && str_count != "0"){
+        arr = NULL;
+        return 0;
+    }
+
+    // Iterate through as many lines as count says
+    // again fscanf to string first for safe conversion
+    char *str_id;
+    char *str_x;
+    char *str_y;
+    int id;
+    int x;
+    int y;
+
+    // How much results did we get from our scan
+    int res;
+
+    for(int i = 0; i<count; ++i){
+        res = fscanf(file, "%s %s %s", str_id, str_x, str_y);
+
+        if(res!=3){
+            // Error while scanning line, ignore it
+            continue;
+        }
+
+    }
+
+
+    fclose(file);
 }
 
 /*
