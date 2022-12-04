@@ -84,7 +84,6 @@ void init_cluster(struct cluster_t *c, int cap)
 
     // TODO
     if(c->obj == NULL){
-        cap = 0;
         c->capacity = 0;
         return;
     }
@@ -120,13 +119,10 @@ struct cluster_t *resize_cluster(struct cluster_t *c, int new_cap)
     if (c->capacity >= new_cap)
         return c;
 
-    size_t size = sizeof(struct obj_t) * new_cap;
 
-    void *arr = realloc(c->obj, size);
-    if (arr == NULL)
-        return NULL;
+    void *arr = realloc(c->obj, sizeof(struct obj_t) * new_cap);
 
-    c->obj = (struct obj_t*)arr;
+    c->obj = arr;
     c->capacity = new_cap;
     return c;
 }
@@ -138,6 +134,10 @@ struct cluster_t *resize_cluster(struct cluster_t *c, int new_cap)
 void append_cluster(struct cluster_t *c, struct obj_t obj)
 {
     // TODO
+    if (c->size==c->capacity){
+        resize_cluster(c, c->capacity+CLUSTER_CHUNK);
+    }
+    c->obj[c->size+1] = obj;
 }
 
 /*
@@ -156,6 +156,10 @@ void merge_clusters(struct cluster_t *c1, struct cluster_t *c2)
     assert(c2 != NULL);
 
     // TODO
+    for (int i = 0; i < c2->size; ++i){
+        append_cluster(c1, c2->obj[i]);
+    }
+    sort_cluster(c1);
 }
 
 /**********************************************************************/
@@ -172,6 +176,8 @@ int remove_cluster(struct cluster_t *carr, int narr, int idx)
     assert(narr > 0);
 
     // TODO
+    clear_cluster(&carr[idx]);
+    return narr-1;
 }
 
 /*
@@ -183,6 +189,8 @@ float obj_distance(struct obj_t *o1, struct obj_t *o2)
     assert(o2 != NULL);
 
     // TODO
+    int dist = sqrt(pow(o1->x - o2->x, 2) + pow(o1->y - o2->y, 2));
+    return dist;
 }
 
 /*
@@ -257,6 +265,8 @@ int load_clusters(char *filename, struct cluster_t **arr)
     assert(arr != NULL);
 
     // TODO
+    FILE *file = fopen(filename, "r");
+    fget
 }
 
 /*
