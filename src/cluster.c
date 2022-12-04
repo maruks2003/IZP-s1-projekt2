@@ -82,14 +82,22 @@ void init_cluster(struct cluster_t *c, int cap)
     assert(c != NULL);
     assert(cap >= 0);
 
-    // TODO
+    // TODO - hopefully done
     if(c->obj == NULL){
+    // TODO - remove the segfault here
         c->capacity = 0;
         return;
     }
 
+    // TODO - remove the segfault here
     c->capacity = cap;
-    struct obj_t *new_obj = malloc(sizeof(struct obj_t)*cap);
+    struct cluster_t *new_c = malloc(sizeof(struct obj_t)*cap);
+
+    // Check if the malloc was succesfull
+    if(new_c == NULL){
+        return;
+    }
+    c = new_c;
 }
 
 /*
@@ -97,7 +105,7 @@ void init_cluster(struct cluster_t *c, int cap)
  */
 void clear_cluster(struct cluster_t *c)
 {
-    // TODO
+    // TODO - hopefully done
     free(c->obj);
     c->obj = NULL;
     c->capacity = 0;
@@ -133,7 +141,7 @@ struct cluster_t *resize_cluster(struct cluster_t *c, int new_cap)
  */
 void append_cluster(struct cluster_t *c, struct obj_t obj)
 {
-    // TODO
+    // TODO - hopefully done
     if (c->size==c->capacity){
         resize_cluster(c, c->capacity+CLUSTER_CHUNK);
     }
@@ -155,7 +163,7 @@ void merge_clusters(struct cluster_t *c1, struct cluster_t *c2)
     assert(c1 != NULL);
     assert(c2 != NULL);
 
-    // TODO
+    // TODO - hopefully done
     for (int i = 0; i < c2->size; ++i){
         append_cluster(c1, c2->obj[i]);
     }
@@ -175,7 +183,7 @@ int remove_cluster(struct cluster_t *carr, int narr, int idx)
     assert(idx < narr);
     assert(narr > 0);
 
-    // TODO
+    // TODO - hopefully done
     clear_cluster(&carr[idx]);
     return narr-1;
 }
@@ -188,8 +196,8 @@ float obj_distance(struct obj_t *o1, struct obj_t *o2)
     assert(o1 != NULL);
     assert(o2 != NULL);
 
-    // TODO
-    int dist = sqrt(pow(o1->x - o2->x, 2) + pow(o1->y - o2->y, 2));
+    // TODO - hopefully done
+    float dist = sqrt(pow(o1->x - o2->x, 2) + pow(o1->y - o2->y, 2));
     return dist;
 }
 
@@ -203,7 +211,23 @@ float cluster_distance(struct cluster_t *c1, struct cluster_t *c2)
     assert(c2 != NULL);
     assert(c2->size > 0);
 
-    // TODO
+    // TODO - hopefully done
+    // We set the initial distance
+    float min = obj_distance(&c1->obj[0], &c2->obj[0]);
+
+    // The value which we will be comparing with min
+    float cmp;
+
+    for(int i = 0; i < c1->size; ++i){
+        for(int j = 0; j < c2->size; ++j){
+            cmp = obj_distance(&c1->obj[i], &c2->obj[j]);
+            if(cmp < min){
+                // cmp is our new smallest distance
+                min = cmp;
+            }
+        }
+    }
+    return min;
 }
 
 /*
@@ -217,6 +241,36 @@ void find_neighbours(struct cluster_t *carr, int narr, int *c1, int *c2)
     assert(narr > 0);
 
     // TODO
+
+    // We can't find neighobours if we don't have
+    // enough clusters to compare
+    if (narr < 2){
+        *c1 = -1;
+        *c2 = -1;
+        return;
+    }
+
+    // If we have only 2 clusters then they must be neighbours
+    if (narr == 2){
+        *c1 = 0;
+        *c2 = 1;
+        return;
+    }
+
+    // We set the initial smallest distance
+    float min = cluster_distance(&carr[0], &carr[1]);
+    float cmp;
+
+    for(int i = 0; i < narr; ++i){
+        for(int j = i+1; j < narr; ++j){
+            // Compare clusters and 
+            cmp = cluster_distance(&carr[i], &carr[j]); 
+            if(cmp < min){
+                min = cmp;
+            }
+        }
+    }
+
 }
 
 // pomocna funkce pro razeni shluku
@@ -264,61 +318,56 @@ int load_clusters(char *filename, struct cluster_t **arr)
 {
     assert(arr != NULL);
 
-    // TODO
+    // TODO - hopefully done
     FILE *file = fopen(filename, "r");
 
+    if(file == NULL){
+        *arr = NULL;
+        fprintf(stderr, "Error while opening file\n");
+        return 0;
+    }
+
+
+    // How much results did we get from fscanf 
+    // used for error handling
+    int res = 0;
 
     // fscanf the count to string first in order
     // to safely convert it to int later
     int count;
-    char *str_count[100];
-    fscanf(file, "count=%s", str_count);
-    count = atoi(str_count);
+    res = fscanf(file, "count=%d", &count);
 
-    // atoi returns 0 on error, we must check if we have
-    // an error or if just scanned 0
-    if(count = 0 && str_count != "0"){
-        arr = NULL;
+    // Error in fscanf
+    if (res != 1){
+        *arr = NULL;
+        fclose(file);
+        fprintf(stderr, "Error while reading file");
         return 0;
     }
+    res = 0;
 
-    // Iterate through as many lines as count says
-    // again fscanf to string first for safe conversion
-    char *str_id;
-    char *str_x;
-    char *str_y;
+    // obj_t properties
     int id;
     int x;
     int y;
 
-    // How much results did we get from our scan
-    int res;
+    // Iterate through as many lines as count says
+    for(int i = 0; i < count; ++i){
+        res = fscanf(file, "%d %d %d", &id, &x, &y);
 
-    for(int i = 0; i<count; ++i){
-        res = fscanf(file, "%s %s %s", str_id, str_x, str_y);
-
-        // Checking for error while scanning line
+        // Checking for error while scanning line and skipping the line
         if(res!=3){
             continue;
         }
 
-        id = atoi(str_id);
-        x = atoi(str_x);
-        y = atoi(str_y);
-
-        // Checking for errors in conversion
-        if((id = 0 && str_id != "0")||(x = 0 && str_x != "0")||(y = 0 && str_y != "0")){
-            continue;
-        }
-
-        struct object_t
-
-        append_cluster();
+        init_cluster(arr[i], CLUSTER_CHUNK);
+        struct obj_t object={id, x, y};
+        append_cluster(arr[i], object);
 
     }
 
-
     fclose(file);
+    return count;
 }
 
 /*
@@ -340,5 +389,42 @@ int main(int argc, char *argv[])
     struct cluster_t *clusters;
 
     // TODO
+    int final_count = 1;
+
+    // Parse the arguments
+    //
+    // Invalid number of arguments
+    // return and print an error
+    if(argc < 2 || argc > 3){
+        fprintf(stderr, "Error, invalid number of arguments: %d\n", argc-1);
+        return 1;
+    }
+    // Filename is the first argument
+    char *filename = argv[1];
+
+    // The cluster count is provided
+    if(argc == 3){
+        int res = 0;
+        res = sscanf(argv[2], "%d", &final_count); 
+
+        if(res == 0){
+            // The argument wasn't parsed succesfully
+            fprintf(stderr, "The 2nd argument must be a number\n");
+            return 1;
+        }
+        if(final_count <= 0){
+            // final_count is too small
+            fprintf(stderr, "The 2nd argument must be larger than 0\n");
+            return 1;
+        }
+    }
+    // End of argument parsing
+
+    int narr = load_clusters(filename, &clusters);
+    if(clusters == NULL){
+        return 1;
+    }
+
+    print_clusters(clusters, narr);
 }
 
