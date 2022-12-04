@@ -123,6 +123,7 @@ class Tester:
 
         if filename is not None and create_file:
             self.create_input_file(input_, filename, count)
+            os.system("cat "+filename)
 
         str_output = (
             self.create_output(input_, expected_contacts)

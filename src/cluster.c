@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <math.h> // sqrtf
 #include <limits.h> // INT_MAX
+#include <stdbool.h>
 
 /*****************************************************************
  * Ladici makra. Vypnout jejich efekt lze definici makra
@@ -101,6 +102,7 @@ void clear_cluster(struct cluster_t *c)
     free(c->obj);
     c->obj = NULL;
     c->capacity = 0;
+    c->size = 0;
 }
 
 /// Chunk of cluster objects. Value recommended for reallocation.
@@ -177,7 +179,12 @@ int remove_cluster(struct cluster_t *carr, int narr, int idx)
     assert(narr > 0);
 
     // TODO - hopefully done
+
     clear_cluster(&carr[idx]);
+    for(int i = idx; i < narr-1; i++){
+        carr[i] = carr[i+1];
+    }
+
     return narr-1;
 }
 
@@ -190,7 +197,7 @@ float obj_distance(struct obj_t *o1, struct obj_t *o2)
     assert(o2 != NULL);
 
     // TODO - hopefully done
-    float dist = sqrt(pow(o1->x - o2->x, 2) + pow(o1->y - o2->y, 2));
+    float dist = sqrtf(powf(o1->x - o2->x, 2) + powf(o1->y - o2->y, 2));
     return dist;
 }
 
@@ -233,7 +240,7 @@ void find_neighbours(struct cluster_t *carr, int narr, int *c1, int *c2)
 {
     assert(narr > 0);
 
-    // TODO
+    // TODO - hopefully done 
 
     // We can't find neighobours if we don't have
     // enough clusters to compare
@@ -260,6 +267,8 @@ void find_neighbours(struct cluster_t *carr, int narr, int *c1, int *c2)
             cmp = cluster_distance(&carr[i], &carr[j]); 
             if(cmp < min){
                 min = cmp;
+                *c1 = i;
+                *c2 = j;
             }
         }
     }
@@ -323,49 +332,61 @@ int load_clusters(char *filename, struct cluster_t **arr)
     int count;
 
     // Error in fscanf
-    if (fscanf(file, "count=%d", &count) != 1){
+    if(fscanf(file, "count=%d", &count) != 1){
         fclose(file);
-        fprintf(stderr, "Error while reading file");
+        *arr = NULL;
+        fprintf(stderr, "Error while reading file\n");
+        return 0;
+    }
+    if(count < 1){
+        fclose(file);
+        *arr = NULL;
+        fprintf(stderr, "Error, count cant be lower than 0\n");
         return 0;
     }
 
     // obj_t properties
-    int id;
-    int x;
-    int y;
+    int id, x, y;
 
     // Malloc enough space for all the clusters
     // and check for error
     *arr = malloc(sizeof(struct cluster_t)*count);
     if (*arr == NULL){
+        *arr = NULL;
         fclose(file);
         return 0;
     }
 
     // Iterate through as many lines as count says
+
+    // bool
+    bool failed = false;
     for(int i = 0; i < count; ++i){
-        arr[i] = malloc(sizeof(struct cluster_t));
-        if (arr[i] == NULL){
+        if(fscanf(file, "%d %d %d", &id, &x, &y) != 3){
+            failed = true;
+        }
+
+        init_cluster(&(*arr)[i], CLUSTER_CHUNK);
+
+        // Unsuccesfull initialization
+        if((*arr)[i].capacity != 0 && (*arr)[i].obj == NULL){
+            failed = true;
+        }
+        if(failed){
+            fprintf(stderr, "Wrong input format\n");
+
+            for(int j = 0; j <= i; j++){
+                clear_cluster(&(*arr)[j]);
+            }
+
+            free(*arr);
+            *arr = NULL;
             fclose(file);
             return 0;
         }
 
-        // Checking for error while scanning line and skipping the line
-        if(fscanf(file, "%d %d %d", &id, &x, &y) != 3){
-            continue;
-        }
-        dfmt("%d %d %d", id, x, y);
-
-        init_cluster(arr[i], CLUSTER_CHUNK);
-
-        // Unsuccesfull initialization
-        if(arr[i]->capacity != 0 && arr[i]->obj == NULL){
-            free(arr[i]);
-            arr[i] = NULL;
-        }
-
         struct obj_t object={id, x, y};
-        append_cluster(arr[i], object);
+        append_cluster(&(*arr)[i], object);
 
     }
 
@@ -414,6 +435,9 @@ int main(int argc, char *argv[])
             // The argument wasn't parsed succesfully
             fprintf(stderr, "The 2nd argument must be a number\n");
             return 1;
+        }else if(res < 0){
+            fprintf(stderr, "Error while parsing arguments\n");
+            return 1;
         }
         if(final_count <= 0){
             // final_count is too small
@@ -428,6 +452,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    int c1_idx, c2_idx;
+    while(narr > final_count){
+        find_neighbours(clusters, narr, &c1_idx, &c2_idx);
+        merge_clusters(&clusters[c1_idx], &clusters[c2_idx]);
+        narr = remove_cluster(clusters, narr, c2_idx);
+    }
     print_clusters(clusters, narr);
+    for(int i = 0; i < narr; i++){
+        clear_cluster(&clusters[i]);
+    }
+    free(clusters);
+
+    return 0;
 }
 
